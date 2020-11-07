@@ -89,6 +89,7 @@ class SimpleSwitch13(app_manager.RyuApp):
             # dst_ip, dst_mac=ffffff
             mypkt = packet.Packet()
             mypkt.add_protocol(ethernet.ethernet(
+                ethertype=0x0806, # !!!! so important !!!
                 src=self.ip2mac[pkt_arp.dst_ip], # need to know the ip asked
                 dst=src # eth src
             ))
