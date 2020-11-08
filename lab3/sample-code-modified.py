@@ -1,3 +1,7 @@
+"""
+https://gist.github.com/aweimeow/d3662485aa224d298e671853aadb2d0f
+"""
+
 from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER
@@ -25,6 +29,15 @@ class SimpleSwitch13(app_manager.RyuApp):
             '10.0.0.3': '10:00:00:00:00:03',
             '10.0.0.4': '10:00:00:00:00:04'
         }
+
+    def icmp_outport(self, dpid, src, dst):
+        if (dpid==1 and dst=='10:00:00:00:00:01') \
+        or (dpid==2 and dst=='10:00:00:00:00:02') \
+        or (dpid==3 and dst=='10:00:00:00:00:03') \
+        or (dpid==4 and dst=='10:00:00:00:00:04'):
+            return 1
+        return 2
+
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
@@ -64,28 +77,31 @@ class SimpleSwitch13(app_manager.RyuApp):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         in_port = msg.match['in_port']
-        print('in_port', in_port)
+
         pkt = packet.Packet(msg.data)
 
         eth = pkt.get_protocol(ethernet.ethernet)
 
         dst = eth.dst
         src = eth.src
+        dpid = datapath.id
+
 
         pkt_arp = pkt.get_protocol(arp.arp)
         pkt_ipv4 = pkt.get_protocol(ipv4.ipv4)
         pkt_icmp = pkt.get_protocol(icmp.icmp)
         pkt_tcp = pkt.get_protocol(tcp.tcp)
         pkt_udp = pkt.get_protocol(udp.udp)
-
+    
+        if dst.split(":")[0]!='33' and not pkt_arp: 
+            # don't print multicast
+            # don't print arp
+            print("[問控制器] sw:", dpid, "in:", in_port)
+            print(""*8,pkt)
+            
         # ARP
         if pkt_arp:
-            print("[ARP] arrive at", datapath.id, dst)
-            if pkt_arp.opcode != arp.ARP_REQUEST:
-                return
-            print('PEKO\n', pkt)
-            # print('PEKO', pkt_arp)
-
+            print("[ARP]",dpid,src,dst, "問IP", pkt_arp.dst_ip)
             # dst_ip, dst_mac=ffffff
             mypkt = packet.Packet()
             mypkt.add_protocol(ethernet.ethernet(
@@ -99,48 +115,54 @@ class SimpleSwitch13(app_manager.RyuApp):
                 #src_ip=pkt_arp.dst_ip, # need to know the ip asked
                 dst_ip=pkt_arp.src_ip,
                 opcode=arp.ARP_REPLY,
-                src_mac='10:00:00:00:00:02',
-                src_ip='10.0.0.2'
+                src_mac=self.ip2mac[pkt_arp.dst_ip],
+                src_ip=pkt_arp.dst_ip
             ))
-            print('A\n', mypkt)
             self._send_packet(datapath, in_port, mypkt)
 
-        else:
-            print("ELSE\n")
-            print(pkt)
 
-        # # IPV4
-        # elif pkt_ipv4:
-        #     # ICMP
-        #     if pkt_icmp:
-        #         # calc out port
-        #         out_port =
-        #         # add flow
-        #         match = parser.OFPMatch()
-        #         actions = [parser.OFPActionOutput(port=out_port)]
-        #         self.add_flow(datapath, 1, match, actions)
-        #         # send packet
-        #         self._send_msg(datapath, pkt, out_port)
-        #     # TCP
-        #     elif pkt_tcp:
-        #         # HTTP RST
-        #         if pkt_tcp.dst_port == 80 and (HOST2 or HOST4):
-        #             # generate an HTTP RST packet
-        #             # send packet
-        #         # NON-TCP HTTP
-        #         else:
-        #             # calc out port
-        #             # add flow
-        #             # send packet
-        #             # add http flow
-        #     # UDP
-        #     elif pkt_udp:
-        #         if HOST1 or HOST4:
-        #             # add drop flow
-        #         else:
-        #             # calc out port
-        #             # add flow
-        #             # send packet
+
+        # IPV4
+        elif pkt_ipv4:
+            # ICMP
+            if pkt_icmp:
+                # calc out port
+                print('[ICMP]',dpid,src,dst)
+                out_port = self.icmp_outport(dpid,src,dst) # icmp go clockwise
+                # pattern for match
+                match = parser.OFPMatch(eth_type=0x0800,
+                                        #ip_proto=4,
+                                        eth_dst=dst)
+                # action to do
+                actions = [parser.OFPActionOutput(port=out_port)]
+                # add flow
+                self.add_flow(datapath, 1, match, actions)
+                # send packet
+                self._send_packet(datapath, out_port, pkt)
+            # # TCP
+            # elif pkt_tcp:
+            #     # HTTP RST
+            #     if pkt_tcp.dst_port == 80 and (HOST2 or HOST4):
+            #         # generate an HTTP RST packet
+            #         # send packet
+            #     # NON-TCP HTTP
+            #     else:
+            #         # calc out port
+            #         # add flow
+            #         # send packet
+            #         # add http flow
+            # # UDP
+            # elif pkt_udp:
+            #     if HOST1 or HOST4:
+            #         # add drop flow
+            #     else:
+            #         # calc out port
+            #         # add flow
+            #         # send packet
+            else:
+                pass
+                # print("ELSE\n")
+                # print(pkt)
 
     # def _send_msg(self, switch, pkt, out_port):
     #     return
@@ -152,7 +174,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         # self.logger.info("LOG:: packet-out %s" % (pkt,))
         data = pkt.data
         actions = [parser.OFPActionOutput(port=port)]
-        print("out:", port, "sw:", datapath.id)
+        print("[控制器吩咐往下傳] sw:", datapath.id, "out:", port)
         out = parser.OFPPacketOut(datapath=datapath,
                                   buffer_id=ofproto.OFP_NO_BUFFER,
                                   in_port=ofproto.OFPP_CONTROLLER,
