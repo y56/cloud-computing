@@ -42,11 +42,22 @@ https://gist.github.com/aweimeow/d3662485aa224d298e671853aadb2d0f
 h4 ping -c1 h1 && ping -c1 h2 && ping -c1 h3 && ping -c1 h4
 
 # udp test
+
 y56:~$ nc -z -v -u 192.168.1.2 123
 Connection to 192.168.1.2 123 port [udp/ntp] succeeded!
 
 y56:~$ nc -z -v -u ptt.cc 123
 Connection to ptt.cc 123 port [udp/ntp] succeeded!
+
+this will send 5 udp packets
+
+## send only one packet
+
+xterm h1 
+    nc -l -u 22 // to listen to udp port 22
+
+h3 nc -zv -u -w1 h1 22
+I don't know the parameters. It is not just send one. It is waiting for reponse. But anyway.
 
 # tcp test
 xterm h2

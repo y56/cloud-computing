@@ -38,6 +38,14 @@ class SimpleSwitch13(app_manager.RyuApp):
             return 1
         return 2
 
+    def couter_clockwise_outport(self, dpid, src, dst):
+        if (dpid==1 and dst=='10:00:00:00:00:01') \
+        or (dpid==2 and dst=='10:00:00:00:00:02') \
+        or (dpid==3 and dst=='10:00:00:00:00:03') \
+        or (dpid==4 and dst=='10:00:00:00:00:04'):
+            return 1
+        return 3
+
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
@@ -143,7 +151,9 @@ class SimpleSwitch13(app_manager.RyuApp):
             elif pkt_tcp:
                 print('[TCP]')
                 # HTTP RST(RST=reset) # note: HTTP in on TCP
-                if pkt_tcp.dst_port == 80 and (src=='10:00:00:00:00:02' or src=='10:00:00:00:00:02'):
+                if pkt_tcp.dst_port == 80 and (src=='10:00:00:00:00:02' or src=='10:00:00:00:00:04'):
+
+                    print("    [HTTP][TCP][H2/H4]")
                     # at s2/s4, when h2/h4 send tcp/http to s2/s4, packet-in to controller,
                     # controll fake a RST(reset) to make h2/h4 stop http/tcp
 
@@ -153,11 +163,20 @@ class SimpleSwitch13(app_manager.RyuApp):
                     mypkt.add_protocol(ipv4.ipv4(src=pkt_ipv4.dst,dst=pkt_ipv4.src,proto=6)) # proto=6 for TCP
                     mypkt.add_protocol(tcp.tcp(src_port=pkt_tcp.dst_port,
                                                dst_port=pkt_tcp.src_port,
-                                               ack=pkt_tcp.seq+1,
+                                               ack=pkt_tcp.seq+1, # TCP 序列號 (Sequence Number, SEQ)
                                                bits=0b010100))
                     # send packet
-                    self._send_packet(datapath, out_port, pkt)
-                    print('[結束 h2/h4 的 http]')
+                    self._send_packet(datapath, 1, pkt)
+                    print('    [結束 h2/h4 的 http]')
+
+                    # add flow, always ask controller for this kind
+                    match = parser.OFPMatch(eth_type=0x0800, # IP
+                                            ip_proto=6, # tcp
+                                            eth_src=src,
+                                            tcp_dst=pkt_tcp.dst_port)
+                    actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
+                                                    ofproto.OFPCML_NO_BUFFER)]
+                    self.add_flow(datapath, 100, match, actions)
                 # NON-HTTP TCP # go clockwise 
                 else:
                     # calc out port
@@ -166,12 +185,14 @@ class SimpleSwitch13(app_manager.RyuApp):
                     # add http flow
 
                     # calc out port
-                    print('[NON-HTTP TCP]',dpid,src,dst)
+                    print('    [normal TCP]',dpid,src,dst, "tcp_dst:", pkt_tcp.dst_port, "tcp_src:", pkt_tcp.src_port)
                     out_port = self.clockwise_outport(dpid,src,dst) # icmp go clockwise
                     # pattern for match
-                    match = parser.OFPMatch(eth_type=0x0800,
-                                            #ip_proto=4,
-                                            eth_dst=dst)
+                    match = parser.OFPMatch(eth_type=0x0800, # IP
+                                            ip_proto=6, # tcp
+                                            eth_src=src,
+                                            eth_dst=dst,
+                                            tcp_dst=pkt_tcp.dst_port)
                     # action to do
                     actions = [parser.OFPActionOutput(port=out_port)]
                     # add flow
@@ -183,6 +204,26 @@ class SimpleSwitch13(app_manager.RyuApp):
                 print('[UDP]')
                 # ip protocal 17 for udp
 
+                if src!='10:00:00:00:00:02' and src!='10:00:00:00:00:04':
+                # go counter-clockwise
+                # calc out port
+                    print('    [normal UDP]',dpid,src,dst, "tcp_dst:", pkt_udp.dst_port, "tcp_src:", pkt_udp.src_port)
+                    out_port = self.couter_clockwise_outport(dpid,src,dst) # icmp go clockwise
+                    # pattern for match
+                    match = parser.OFPMatch(eth_type=0x0800, # IP
+                                            ip_proto=17, # udp
+                                            eth_src=src,
+                                            eth_dst=dst,
+                                            udp_dst=pkt_udp.dst_port)
+                    # action to do
+                    actions = [parser.OFPActionOutput(port=out_port)]
+                    # add flow
+                    self.add_flow(datapath, 1, match, actions)
+                    # send packet
+                    self._send_packet(datapath, out_port, pkt)
+
+                else:
+                    pass
                 # if HOST1 or HOST4:
                 #     # add drop flow
                 # else:
