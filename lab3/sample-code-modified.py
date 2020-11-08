@@ -30,7 +30,7 @@ class SimpleSwitch13(app_manager.RyuApp):
             '10.0.0.4': '10:00:00:00:00:04'
         }
 
-    def icmp_outport(self, dpid, src, dst):
+    def clockwise_outport(self, dpid, src, dst):
         if (dpid==1 and dst=='10:00:00:00:00:01') \
         or (dpid==2 and dst=='10:00:00:00:00:02') \
         or (dpid==3 and dst=='10:00:00:00:00:03') \
@@ -98,7 +98,7 @@ class SimpleSwitch13(app_manager.RyuApp):
             # don't print arp
             print("[問控制器] sw:", dpid, "in:", in_port)
             print(""*8,pkt)
-            
+
         # ARP
         if pkt_arp:
             print("[ARP]",dpid,src,dst, "問IP", pkt_arp.dst_ip)
@@ -128,7 +128,7 @@ class SimpleSwitch13(app_manager.RyuApp):
             if pkt_icmp:
                 # calc out port
                 print('[ICMP]',dpid,src,dst)
-                out_port = self.icmp_outport(dpid,src,dst) # icmp go clockwise
+                out_port = self.clockwise_outport(dpid,src,dst) # icmp go clockwise
                 # pattern for match
                 match = parser.OFPMatch(eth_type=0x0800,
                                         #ip_proto=4,
@@ -139,26 +139,56 @@ class SimpleSwitch13(app_manager.RyuApp):
                 self.add_flow(datapath, 1, match, actions)
                 # send packet
                 self._send_packet(datapath, out_port, pkt)
-            # # TCP
-            # elif pkt_tcp:
-            #     # HTTP RST
-            #     if pkt_tcp.dst_port == 80 and (HOST2 or HOST4):
-            #         # generate an HTTP RST packet
-            #         # send packet
-            #     # NON-TCP HTTP
-            #     else:
-            #         # calc out port
-            #         # add flow
-            #         # send packet
-            #         # add http flow
-            # # UDP
-            # elif pkt_udp:
-            #     if HOST1 or HOST4:
-            #         # add drop flow
-            #     else:
-            #         # calc out port
-            #         # add flow
-            #         # send packet
+            # TCP
+            elif pkt_tcp:
+                print('[TCP]')
+                # HTTP RST(RST=reset) # note: HTTP in on TCP
+                if pkt_tcp.dst_port == 80 and (src=='10:00:00:00:00:02' or src=='10:00:00:00:00:02'):
+                    # at s2/s4, when h2/h4 send tcp/http to s2/s4, packet-in to controller,
+                    # controll fake a RST(reset) to make h2/h4 stop http/tcp
+
+                    # generate an HTTP RST packet
+                    mypkt=packet.Packet()
+                    mypkt.add_protocol(ethernet.ethernet(ethertype=eth.ethertype,src=dst,dst=src))
+                    mypkt.add_protocol(ipv4.ipv4(src=pkt_ipv4.dst,dst=pkt_ipv4.src,proto=6)) # proto=6 for TCP
+                    mypkt.add_protocol(tcp.tcp(src_port=pkt_tcp.dst_port,
+                                               dst_port=pkt_tcp.src_port,
+                                               ack=pkt_tcp.seq+1,
+                                               bits=0b010100))
+                    # send packet
+                    self._send_packet(datapath, out_port, pkt)
+                    print('[結束 h2/h4 的 http]')
+                # NON-HTTP TCP # go clockwise 
+                else:
+                    # calc out port
+                    # add flow
+                    # send packet
+                    # add http flow
+
+                    # calc out port
+                    print('[NON-HTTP TCP]',dpid,src,dst)
+                    out_port = self.clockwise_outport(dpid,src,dst) # icmp go clockwise
+                    # pattern for match
+                    match = parser.OFPMatch(eth_type=0x0800,
+                                            #ip_proto=4,
+                                            eth_dst=dst)
+                    # action to do
+                    actions = [parser.OFPActionOutput(port=out_port)]
+                    # add flow
+                    self.add_flow(datapath, 1, match, actions)
+                    # send packet
+                    self._send_packet(datapath, out_port, pkt)
+            # UDP
+            elif pkt_udp:
+                print('[UDP]')
+                # ip protocal 17 for udp
+
+                # if HOST1 or HOST4:
+                #     # add drop flow
+                # else:
+                #     # calc out port
+                #     # add flow
+                #     # send packet
             else:
                 pass
                 # print("ELSE\n")
