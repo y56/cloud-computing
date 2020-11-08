@@ -204,7 +204,7 @@ class SimpleSwitch13(app_manager.RyuApp):
                 print('[UDP]')
                 # ip protocal 17 for udp
 
-                if src!='10:00:00:00:00:02' and src!='10:00:00:00:00:04':
+                if src!='10:00:00:00:00:01' and src!='10:00:00:00:00:04':
                 # go counter-clockwise
                 # calc out port
                     print('    [normal UDP]',dpid,src,dst, "tcp_dst:", pkt_udp.dst_port, "tcp_src:", pkt_udp.src_port)
@@ -222,9 +222,19 @@ class SimpleSwitch13(app_manager.RyuApp):
                     # send packet
                     self._send_packet(datapath, out_port, pkt)
 
-                else:
-                    pass
-                # if HOST1 or HOST4:
+                else: # if HOST1 or HOST4 # drop
+                    print("[UDP] to drop")
+                    match = parser.OFPMatch(eth_type=0x0800, # IP
+                                            ip_proto=17, # udp
+                                            eth_src=src,
+                                            eth_dst=dst,
+                                            udp_dst=pkt_udp.dst_port)
+                    # action to do
+                    actions = [] # drop
+                    # add flow
+                    self.add_flow(datapath, 10, match, actions)
+                    # don't send packet
+                    
                 #     # add drop flow
                 # else:
                 #     # calc out port
@@ -246,6 +256,7 @@ class SimpleSwitch13(app_manager.RyuApp):
         data = pkt.data
         actions = [parser.OFPActionOutput(port=port)]
         print("[控制器吩咐往下傳] sw:", datapath.id, "out:", port)
+        print()
         out = parser.OFPPacketOut(datapath=datapath,
                                   buffer_id=ofproto.OFP_NO_BUFFER,
                                   in_port=ofproto.OFPP_CONTROLLER,
