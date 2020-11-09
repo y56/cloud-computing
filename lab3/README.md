@@ -1,14 +1,8 @@
-# term 1
+# run
 
-    `sudo mn --custom topology.py --topo mytopo --mac --arp --switch ovsk --controller remote`
+     alias mmm='sudo mn --custom topology.py --topo mytopo --mac --switch ovsk --controller remote'
+     alias rrr='sh flow.sh && ryu-manager sample-code-modified.py'
 
-# term 2
-
-    `sh ./flow.sh`
-
-# term 2
-
-    `ryu-manager --verbose sample_code.py`
 # trouble shooting
     if get error:
         `OSError: [Errno 98] Address already in use`
