@@ -1,7 +1,7 @@
 # run
 
      alias mmm='sudo mn --custom topology.py --topo mytopo --mac --switch ovsk --controller remote'
-     alias rrr='sh flow.sh && ryu-manager sample-code-modified.py'
+     alias rrr='sh flow.sh && ryu-manager controller-lab3.py'
 
 # trouble shooting
     if get error:
