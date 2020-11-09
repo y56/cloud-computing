@@ -56,8 +56,6 @@ this will send 5 udp packets
 xterm h1 
     nc -l -u 22 // to listen to udp port 22
 
-h3 nc -zv -u -w1 h1 22
-I don't know the parameters. It is not just send one. It is waiting for reponse. But anyway.
 
 # tcp test
 xterm h2
@@ -78,4 +76,24 @@ XTerm*Background: black
 XTerm*Foreground: grey
 
 xrdb -I$HOME ~/.Xresources
+
+
+# test tool
+## arp: arping
+* h1 arping h2
+* h1 arp -a // show arp table
+## icmp: ping/pingall
+* pingall
+* h1 ping h2
+## tcp/udp: nc (netcat) or iperf
+### iperf
+* in xterm of host A: as server: iperf  -s (-u) -p
+* in xterm of host B: as server: iperf  -c  dst_IP (-u) -p
+### netcat
+* nc -l (-u) 22 // to listen as server
+* nc -z -v -u dst_IP port_number // -v for verbose // -z for not containing data
+## http: (ie tcp@8080)
+### iperf
+* in xterm of host A: as server: iperf  -s (-u) -p
+* in xterm of host B: as server: iperf  -c  dst_IP (-u) -p
 

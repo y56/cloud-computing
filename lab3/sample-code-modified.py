@@ -151,7 +151,7 @@ class SimpleSwitch13(app_manager.RyuApp):
             elif pkt_tcp:
                 print('[TCP]')
                 # HTTP RST(RST=reset) # note: HTTP in on TCP
-                if pkt_tcp.dst_port == 80 and (src=='10:00:00:00:00:02' or src=='10:00:00:00:00:04'):
+                if pkt_tcp.dst_port == 8080 and (src=='10:00:00:00:00:02' or src=='10:00:00:00:00:04'):
 
                     print("    [HTTP][TCP][H2/H4]")
                     # at s2/s4, when h2/h4 send tcp/http to s2/s4, packet-in to controller,
@@ -166,7 +166,8 @@ class SimpleSwitch13(app_manager.RyuApp):
                                                ack=pkt_tcp.seq+1, # TCP 序列號 (Sequence Number, SEQ)
                                                bits=0b010100))
                     # send packet
-                    self._send_packet(datapath, 1, pkt)
+                    self._send_packet(datapath, 1, mypkt)
+
                     print('    [結束 h2/h4 的 http]')
 
                     # add flow, always ask controller for this kind
