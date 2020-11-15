@@ -1,0 +1,90 @@
+#!/usr/bin/python
+
+from mininet.topo import Topo
+from mininet.net import Mininet
+from mininet.node import Controller, RemoteController
+from mininet.cli import CLI
+from mininet.log import setLogLevel, info
+from mininet.util import dumpNodeConnections
+from mininet.link import Link, Intf, TCLink
+import os
+from time import sleep
+import sys
+
+N = 8  # change N
+L = 2  # fix level
+
+
+class Topology(Topo):
+    def __init__(self):
+        # Initialize topology
+        Topo.__init__(self)
+
+        # Add hosts
+        total_host = 2 * pow((N / 2), L)
+        hosts = []
+        for i in range(total_host):
+            host_name = "h" + str(i + 1)
+            hosts.append(self.addHost(host_name,
+                                      ip='10.0.0.' + str(i + 1) + '/24'
+
+        # Add edge switches
+        total_edge = 2 * pow((N / 2), L - 1)
+        switches = []
+        count = 0
+        for i in range(total_edge):
+            sw_name = "s" + str(i + 1)
+            switches.append(self.addSwitch(sw_name))
+            count += 1
+
+        # Add core switches
+        total_core = pow((N / 2), L - 1)
+        cores = []
+        for i in range(total_core):
+            sw_name = "s" + str(count + i + 1)
+            cores.append(self.addSwitch(sw_name))
+
+        # Add hosts to edge switches
+        for i in range(len(hosts)):
+            sw_index = int(i / (N / 2))
+            self.addLink(hosts[i], switches[sw_index])
+
+        # Add links between switches
+        for core in cores:
+            for sw in switches:
+                self.addLink(core, sw)
+
+
+# This is for "mn --custom"
+topos={'mytopo': (lambda: Topology())}
+
+
+# This is for "python *.py"
+if __name__ == '__main__':
+    setLogLevel('info')
+
+    topo = Topology()
+    # The TCLink is a special setting for setting the bandwidth in the future.
+    net = Mininet(topo=topo, link=TCLink)
+
+    # 1. Start mininet
+    net.start()
+
+    # Wait for links setup (sometimes, it takes some time to setup, so wait
+    # for a while before mininet starts)
+    print "\nWaiting for links to setup . . . .",
+    sys.stdout.flush()
+    for time_idx in range(3):
+        print ".",
+        sys.stdout.flush()
+        sleep(1)
+
+    # 2. Start the CLI commands
+    info('\n*** Running CLI\n')
+    CLI(net)
+
+    # 3. Stop mininet properly
+    net.stop()
+
+    # If you did not close the mininet, please run "mn -c" to clean up and
+    # re-run the mininet
