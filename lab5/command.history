@@ -1,0 +1,37 @@
+sudo apt install kubectl
+sudo apt install minikube
+sudo apt install helm
+sudo docker run hello-world
+snap install kubectl --classic
+kubectl version --client
+curl
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube_latest_amd64.deb
+sudo dpkg -i minikube_latest_amd64.deb
+minikube start --driver=docker
+minikube status
+kubectl cluster-info
+snap install helm --classic
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update
+kubectl get services
+kubectl get pods
+minikube dashboard
+helm install my-release bitnami/wordpress
+echo Username: user
+echo Password: $(kubectl get secret --namespace default my-release-wordpress -o jsonpath="{.data.wordpress-password}" | base64 --decode)
+export SERVICE_IP=$(kubectl get svc --namespace default my-release-wordpress --template "{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}")
+kubectl get svc --namespace default -w my-release-wordpress
+export SERVICE_IP=$(kubectl get svc --namespace default my-release-wordpress --template "{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}")
+echo "WordPress URL: http://$SERVICE_IP/"
+echo "WordPress Admin URL: http://$SERVICE_IP/admin"
+kubectl get svc --namespace default -w my-release-wordpress
+export SERVICE_IP=$(kubectl get svc --namespace default my-release-wordpress --template "{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}")
+sudo docker run hello-world
+docker run hello-world
+sudo docker run hello-world
+minikube start --driver=docker
+minikube status
+kubectl cluster-info
+sudo usermod -aG docker $USER && newgrp docker
+
+minikube tunnel # IT WORKS!!!

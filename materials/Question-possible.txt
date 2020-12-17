@@ -1,0 +1,30 @@
+1. In virtualization, Why we want a VM to be isolated?
+
+
+2. In HDFS, what's the function of namenodes? And why we want namenodes to have intelligence?
+
+
+3. Why Hicut is better than hypercut?
+
+
+4. Why DIFANE is scalable?
+
+
+5. Please describe the work flow of 'Version' method in Silkroad and explain why this method can guarantee PCC(per-connection consistence)?
+
+
+6. In which scenario Beamer will present better performance than Silkroad?
+
+
+7. Since Spotlight is excellent on 'Good Balancing', what may be the disadvantages when compared with other three Load Balancing strategies?
+
+
+8. Please try to come up with a method that helps pFabric to sort out the packet with highest priority.
+
+
+9. Compare Baraat and pFabric, they all use prioritization mechanism to deal with task scheduling. But it seems that Baraat do better job than pFabric. Do you agree with this statement? Please present your answer with your explanation.
+
+
+PS: 仅供参考，希望各位好哥哥可以补充一些题目，对大家复习都有帮助🙏。
+PPS：chao肯定会出一些what advantage what disadvantage之类的题所以我就没发。
+PPPS：qJump和DCTCP我学得不好不知道咋出题，希望有好哥哥可以出几道有关的题。
